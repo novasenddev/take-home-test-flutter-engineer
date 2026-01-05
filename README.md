@@ -1,6 +1,6 @@
 # Take-Home Test – Flutter Engineer
 
-> **Niveau cible** : Engineer 2 / Senior 1 (3-6 ans d'expérience)  
+> **Niveau cible** : Engineer 2 / Senior 1 (3-6 ans d'expérience)
 > **Durée estimée** : 2 jours
 > **Livrable attendu** | Projet Flutter production-ready + Documentation technique
 > **À envoyer** | Lien vers repository Git (GitHub, GitLab, Bitbucket)
