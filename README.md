@@ -1,602 +1,769 @@
-# Take-Home Test – Flutter Engineer
+# 📱 Take-Home Test – Flutter Engineer
 
-> **Niveau cible** : Engineer 2 / Senior 1 (3-6 ans d'expérience)
-> 
-> **Durée estimée** : 2 jours
-> 
-> **Livrable attendu** | Projet Flutter production-ready + Documentation technique
-> 
-> **À envoyer** | Lien vers repository Git (GitHub, GitLab, Bitbucket)
+> **Niveau cible** : Engineer 2 / Senior 1 (3-6 ans d'expérience)  
+> **Durée estimée** : 6-8 heures (hors bonus)  
+> **Délai de rendu** : 5 jours maximum
 
 ---
 
-## 1. Contexte
+## 🎯 Objectif
 
-Vous rejoignez l'équipe technique de **FinWallet**, une fintech en pleine croissance. L'application mobile permet aux utilisateurs de gérer leur portefeuille financier : consultation de comptes, historique des transactions et virements.
+Ce test évalue votre capacité à développer un **module mobile production-ready** pour une application fintech. Nous évaluons :
 
-En tant qu'ingénieur expérimenté, vous êtes responsable de développer un **module complet et production-ready**. Vous devez démontrer votre capacité à :
-
-| Compétence | Attente |
-|------------|---------|
-| Architecture | Concevoir une architecture scalable et maintenable |
-| Qualité | Produire du code testable, documenté et performant |
-| Sécurité | Implémenter les standards de sécurité d'une app financière |
-| DevOps | Configurer un pipeline CI/CD et des environnements multiples |
-| Leadership technique | Justifier vos choix et anticiper les évolutions |
+| Compétence | Ce que nous observons |
+|------------|----------------------|
+| **Architecture** | Clean Architecture, séparation des responsabilités |
+| **Gestion d'état** | Maîtrise de BLoC, états typés, flux unidirectionnels |
+| **Qualité** | Code testable, lisible, maintenable |
+| **Sécurité** | Standards fintech (stockage sécurisé, biométrie, SSL pinning) |
+| **Pragmatisme** | Équilibre entre perfection et livraison |
 
 ---
 
-## 2. Spécifications Fonctionnelles
+## 📋 Contexte Métier
 
-### 2.1 Écran Authentification
+Vous développez **FinWallet**, une application de gestion de portefeuille financier. Le MVP comprend :
 
-| Exigence | Description | Priorité |
-|----------|-------------|----------|
-| Connexion | Email et mot de passe | Obligatoire |
-| Validation | Format email, mot de passe (8+ chars, 1 majuscule, 1 chiffre, 1 spécial) | Obligatoire |
-| États | idle, loading, success, error avec messages contextuels | Obligatoire |
-| Rate limiting | Blocage après 3 tentatives échouées (30 secondes) | Obligatoire |
-| Biométrie | Touch ID / Face ID avec fallback PIN | Obligatoire |
-| Remember me | Option de mémorisation sécurisée | Obligatoire |
-| Session | Gestion du refresh token et expiration | Obligatoire |
+1. **Authentification** sécurisée
+2. **Dashboard** avec solde et transactions récentes
+3. **Historique** des transactions avec filtres
+4. **Nouveau virement** avec validation
 
-### 2.2 Écran Dashboard
+### API Mock
 
-| Exigence | Description | Priorité |
-|----------|-------------|----------|
-| Solde | Affichage avec animation et option masquer/afficher | Obligatoire |
-| Transactions | 5 dernières avec skeleton loading | Obligatoire |
-| Navigation | Accès rapide virement + historique | Obligatoire |
-| Pull-to-refresh | Avec indicateur visuel et debounce | Obligatoire |
-| Cache | Affichage des données en cache si offline | Obligatoire |
-| Widgets | Graphique d'évolution du solde (7 derniers jours) | Obligatoire |
-
-### 2.3 Écran Historique des Transactions
-
-| Exigence | Description | Priorité |
-|----------|-------------|----------|
-| Pagination | Cursor-based pagination (20 éléments/page) | Obligatoire |
-| Affichage | Date, libellé, montant, type, statut, catégorie | Obligatoire |
-| Filtres | Type, période (date picker), montant min/max | Obligatoire |
-| Recherche | Par libellé avec debounce (300ms) | Obligatoire |
-| Tri | Par date, montant (ascendant/descendant) | Obligatoire |
-| Export | Génération PDF des transactions filtrées | Obligatoire |
-| État vide | Message contextuel selon les filtres appliqués | Obligatoire |
-
-### 2.4 Écran Nouveau Virement
-
-| Exigence | Description | Priorité |
-|----------|-------------|----------|
-| Bénéficiaire | Liste avec recherche + ajout nouveau | Obligatoire |
-| Validation IBAN | Vérification format et checksum | Obligatoire |
-| Montant | Validation temps réel, formatage devise | Obligatoire |
-| Libellé | Max 140 caractères avec compteur | Obligatoire |
-| Confirmation | Récapitulatif + authentification biométrique | Obligatoire |
-| Idempotence | Gestion des doubles soumissions | Obligatoire |
-| États | formulaire → validation → confirmation → 2FA → processing → success/error | Obligatoire |
-| Annulation | Possibilité d'annuler pendant le processing | Obligatoire |
-
-### 2.5 Gestion des Erreurs (Transverse)
-
-| Scénario | Comportement attendu | Priorité |
-|----------|---------------------|----------|
-| Timeout réseau | Retry automatique (3x) avec backoff exponentiel | Obligatoire |
-| Erreur serveur 5xx | Message user-friendly + option retry manuel | Obligatoire |
-| Erreur client 4xx | Message contextuel selon le code d'erreur | Obligatoire |
-| Token expiré | Refresh silencieux ou redirection login | Obligatoire |
-| Mode offline | Cache-first avec indication de données obsolètes | Obligatoire |
-| Maintenance | Écran dédié avec heure estimée de retour | Obligatoire |
+Une API mock est fournie via **MockAPI** ou vous pouvez utiliser un fichier JSON local. Les contrats sont définis en section 9.
 
 ---
 
-## 3. Configuration Multi-Environnements (Flavors)
+## 📦 Livrables Obligatoires
 
-### 3.1 Flavors à Configurer
+### Checklist de Rendu
 
-| Flavor | Nom de l'app | Package suffix | Environnement |
-|--------|--------------|----------------|---------------|
-| `dev` | FinWallet DEV | `.dev` | Développement |
-| `staging` | FinWallet STG | `.staging` | Pré-production |
-| `prod` | FinWallet | *(aucun)* | Production |
+- [ ] Code source sur repository Git (historique propre)
+- [ ] README.md avec instructions d'installation et d'exécution
+- [ ] 3 flavors configurés (dev, staging, prod)
+- [ ] Tests unitaires (couverture ≥ 70% sur BLoCs et Use Cases)
+- [ ] Pipeline CI fonctionnel (GitHub Actions)
+- [ ] APK staging buildable et testable
+- [ ] ARCHITECTURE.md expliquant vos choix
 
-### 3.2 Configuration Native
+---
 
-**Android (`android/app/build.gradle`)** :
+## 🏗️ Partie 1 : Architecture (25 points)
 
-| Exigence | Description | Priorité |
-|----------|-------------|----------|
-| productFlavors | 3 flavors avec `applicationIdSuffix` | Obligatoire |
-| Signing configs | Keystores différents par environnement | Obligatoire |
-| ProGuard | Rules configurées pour la release | Obligatoire |
-| resValue | Nom de l'app dynamique | Obligatoire |
+### 1.1 Clean Architecture Stricte
 
-**iOS** :
-
-| Exigence | Description | Priorité |
-|----------|-------------|----------|
-| Schemes | 3 schemes Xcode (dev, staging, prod) | Obligatoire |
-| xcconfig | Fichiers de configuration par environnement | Obligatoire |
-| Bundle ID | Identifiants différents par environnement | Obligatoire |
-| Provisioning | Profils appropriés par environnement | Obligatoire |
-
-### 3.3 Configuration Dart
-
-```dart
-abstract class AppConfig {
-  String get appName;
-  String get baseUrl;
-  String get apiVersion;
-  Duration get connectionTimeout;
-  Duration get receiveTimeout;
-  bool get enableLogging;
-  bool get enableCrashlytics;
-  bool get enablePerformanceMonitoring;
-  bool get certificatePinningEnabled;
-  List<String> get pinnedCertificates;
-}
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      PRESENTATION                            │
+│  ┌─────────┐  ┌─────────┐  ┌─────────┐                      │
+│  │  Pages  │  │  BLoCs  │  │ Widgets │                      │
+│  └────┬────┘  └────┬────┘  └─────────┘                      │
+│       │            │                                         │
+│       ▼            ▼                                         │
+├─────────────────────────────────────────────────────────────┤
+│                        DOMAIN                                │
+│  ┌──────────┐  ┌───────────────┐  ┌─────────────┐           │
+│  │ Entities │  │   Use Cases   │  │ Repositories│ (interfaces)
+│  └──────────┘  └───────────────┘  └─────────────┘           │
+│                        ▲                                     │
+├────────────────────────┼────────────────────────────────────┤
+│                        │        DATA                         │
+│  ┌─────────┐  ┌────────┴───────┐  ┌─────────────┐           │
+│  │  DTOs   │  │  Repositories  │  │ DataSources │           │
+│  └─────────┘  │ (implementations)│  └─────────────┘           │
+│               └────────────────┘                             │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-### 3.4 Variables par Environnement
+| Exigence | Critère de validation | Points |
+|----------|----------------------|--------|
+| Séparation en 3 couches | Domain n'importe rien de Data/Presentation | 5 |
+| Use Cases explicites | 1 use case = 1 action métier, testable isolément | 5 |
+| Repository Pattern | Interface dans Domain, implémentation dans Data | 5 |
+| Entities immuables | Utilisation de `freezed` ou équivalent | 5 |
+| Injection de dépendances | `get_it` + `injectable` configurés | 5 |
 
-| Variable | Dev | Staging | Prod |
-|----------|-----|---------|------|
-| `baseUrl` | `https://api-dev.finwallet.local` | `https://api-staging.finwallet.com` | `https://api.finwallet.com` |
-| `connectionTimeout` | 30s | 15s | 10s |
-| `enableLogging` | `true` | `true` | `false` |
-| `enableCrashlytics` | `false` | `true` | `true` |
-| `enablePerformanceMonitoring` | `false` | `true` | `true` |
-| `certificatePinning` | `false` | `true` | `true` |
-
-### 3.5 Différenciation Visuelle
-
-| Exigence | Description | Priorité |
-|----------|-------------|----------|
-| Icône | Badge "DEV" ou "STG" sur l'icône | Obligatoire |
-| Bannière | Widget Banner en debug/staging | Obligatoire |
-| Couleur | Thème légèrement différent par env | Obligatoire |
-| Version | Affichage build number + env dans les settings | Obligatoire |
-
-### 3.6 Scripts de Build
-
-```bash
-# Développement
-flutter run --flavor dev -t lib/main_dev.dart --dart-define=ENV=dev
-
-# Staging
-flutter run --flavor staging -t lib/main_staging.dart --dart-define=ENV=staging
-
-# Production
-flutter run --flavor prod -t lib/main_prod.dart --dart-define=ENV=prod --release
-
-# Build APK/AAB Production
-flutter build appbundle --flavor prod -t lib/main_prod.dart --release --obfuscate --split-debug-info=build/debug-info
-```
-
----
-
-## 4. Spécifications Techniques
-
-### 4.1 Architecture
-
-| Exigence | Description | Priorité |
-|----------|-------------|----------|
-| Pattern | Clean Architecture stricte | Obligatoire |
-| Couches | Presentation → Domain → Data (dépendances unidirectionnelles) | Obligatoire |
-| Use Cases | Un use case par action métier | Obligatoire |
-| Repository | Interface dans Domain, implémentation dans Data | Obligatoire |
-| Entities | Modèles métier immutables (freezed recommandé) | Obligatoire |
-| DTOs | Séparation modèles API / modèles Domain | Obligatoire |
-| Mappers | Conversion DTO ↔ Entity explicite | Obligatoire |
-
-### 4.2 Gestion d'État
-
-| Exigence | Description | Priorité |
-|----------|-------------|----------|
-| Solution | BLoC/Cubit (obligatoire pour ce test) | Obligatoire |
-| États | Sealed classes ou Freezed unions | Obligatoire |
-| Events | Événements typés et immutables | Obligatoire |
-| Hydratation | Persistance de certains états (hydrated_bloc) | Obligatoire |
-| Tests | 100% des BLoCs testés | Obligatoire |
-
-### 4.3 Injection de Dépendances
-
-| Exigence | Description | Priorité |
-|----------|-------------|----------|
-| Package | get_it + injectable | Obligatoire |
-| Modules | Séparation par feature | Obligatoire |
-| Scopes | Singleton, LazySingleton, Factory selon le cas | Obligatoire |
-| Environnements | Configuration différente dev/staging/prod | Obligatoire |
-
-### 4.4 Networking
-
-| Exigence | Description | Priorité |
-|----------|-------------|----------|
-| Client HTTP | HTTP/Dio avec configuration centralisée | Obligatoire |
-| Interceptors | Auth, Logging, Error handling, Retry | Obligatoire |
-| Certificate Pinning | Implémenté et configurable | Obligatoire |
-| Timeout | Configurables par environnement | Obligatoire |
-| Cancellation | Support des CancelToken | Obligatoire |
-
-**Interceptor attendu :**
-
-```dart
-class AuthInterceptor extends Interceptor {
-  // - Ajoute le Bearer token
-  // - Gère le refresh token en cas de 401
-  // - Queue les requêtes pendant le refresh
-  // - Retry après refresh réussi
-}
-```
-
-### 4.5 Persistance Locale
-
-| Exigence | Description | Priorité |
-|----------|-------------|----------|
-| Secure Storage | Tokens et données sensibles (flutter_secure_storage) | Obligatoire |
-| Cache | Données non sensibles (Hive ou Isar) | Obligatoire |
-| Stratégie | Cache-first avec invalidation temporelle | Obligatoire |
-| Encryption | Base de données chiffrée | Obligatoire |
-| Migration | Système de migration de schéma | Obligatoire |
-
-### 4.6 Sécurité
-
-| Exigence | Description | Priorité |
-|----------|-------------|----------|
-| Stockage sécurisé | flutter_secure_storage pour tokens | Obligatoire |
-| Certificate Pinning | SHA-256 pins configurables | Obligatoire |
-| Biométrie | local_auth avec fallback sécurisé | Obligatoire |
-| Root/Jailbreak | Détection et avertissement | Obligatoire |
-| Screenshot | Désactivation en production (FLAG_SECURE) | Obligatoire |
-| Obfuscation | Code Dart obfusqué en release | Obligatoire |
-| SSL/TLS | Minimum TLS 1.2 | Obligatoire |
-| Session | Expiration + logout sur inactivité (5 min) | Obligatoire |
-
-### 4.7 Performance
-
-| Exigence | Description | Priorité |
-|----------|-------------|----------|
-| Liste | ListView.builder avec itemExtent | Obligatoire |
-| Images | Cache et placeholder (cached_network_image) | Obligatoire |
-| Rebuilds | Minimiser avec const, Selector, BlocSelector | Obligatoire |
-| Memory | Dispose des controllers et subscriptions | Obligatoire |
-| Startup | Splash screen natif, lazy loading des features | Obligatoire |
-
-### 4.8 Observabilité
-
-| Exigence | Description | Priorité |
-|----------|-------------|----------|
-| Crash reporting | Firebase Crashlytics ou Sentry | Obligatoire |
-| Analytics | Événements clés trackés | Obligatoire |
-| Logs | Logger structuré avec niveaux | Obligatoire |
-| Performance | Monitoring des temps de réponse API | Obligatoire |
-
----
-
-## 5. Tests
-
-### 5.1 Exigences de Couverture
-
-| Type | Minimum requis | Cible |
-|------|----------------|-------|
-| Tests unitaires | 80% des use cases et BLoCs | 90%+ |
-| Tests de widgets | Tous les widgets complexes | 70%+ |
-| Tests d'intégration | Parcours critiques | 3 minimum |
-| Golden tests | Écrans principaux | 4 minimum |
-
-### 5.2 Tests Unitaires Obligatoires
-
-| Composant | Tests attendus |
-|-----------|----------------|
-| Use Cases | Tous les cas nominaux et d'erreur |
-| BLoCs/Cubits | Tous les états et transitions |
-| Repositories | Avec mocks des data sources |
-| Validators | Toutes les règles de validation |
-| Mappers | Conversion DTO ↔ Entity |
-
-### 5.3 Tests d'Intégration Obligatoires
-
-| Parcours | Description |
-|----------|-------------|
-| Authentification | Login → Dashboard → Logout |
-| Virement | Dashboard → Nouveau virement → Confirmation → Success |
-| Historique | Dashboard → Historique → Filtres → Détail transaction |
-
-### 5.4 Mocking
-
-| Exigence | Description | Priorité |
-|----------|-------------|----------|
-| Package | mockito + build_runner | Obligatoire |
-| HTTP | Mock des appels API (mocktail accepté) | Obligatoire |
-| Secure Storage | Mock pour les tests | Obligatoire |
-| Biométrie | Mock local_auth | Obligatoire |
-
----
-
-## 6. CI/CD
-
-### 6.1 Pipeline GitHub Actions
-
-| Stage | Actions | Priorité |
-|-------|---------|----------|
-| Lint | `flutter analyze` + `dart format --check` | Obligatoire |
-| Test | `flutter test --coverage` | Obligatoire |
-| Coverage | Rapport + seuil minimum (80%) | Obligatoire |
-| Build Dev | APK debug flavor dev | Obligatoire |
-| Build Staging | APK/IPA release flavor staging | Obligatoire |
-| Build Prod | AAB/IPA release flavor prod (manuel) | Obligatoire |
-
-### 6.2 Fichier Attendu
-
-```yaml
-# .github/workflows/ci.yml
-# À implémenter avec les stages ci-dessus
-```
-
-### 6.3 Fastlane (Bonus valorisé)
-
-| Lane | Description |
-|------|-------------|
-| `test` | Exécution des tests |
-| `beta` | Déploiement staging (Firebase App Distribution) |
-| `release` | Déploiement prod (App Store / Play Store) |
-
----
-
-## 7. Structure de Projet
+### 1.2 Structure de Projet Attendue
 
 ```
 lib/
-├── main.dart
 ├── main_dev.dart
 ├── main_staging.dart
 ├── main_prod.dart
-├── app.dart
-├── injection.dart
 │
 ├── core/
-│   ├── config/
-│   │   ├── app_config.dart
-│   │   ├── dev_config.dart
-│   │   ├── staging_config.dart
-│   │   └── prod_config.dart
-│   ├── constants/
-│   ├── errors/
-│   │   ├── exceptions.dart
-│   │   └── failures.dart
-│   ├── network/
-│   │   ├── http_client.dart
-│   │   ├── interceptors/
-│   │   │   ├── auth_interceptor.dart
-│   │   │   ├── logging_interceptor.dart
-│   │   │   └── retry_interceptor.dart
-│   │   └── api_endpoints.dart
-│   ├── security/
-│   │   ├── biometric_service.dart
-│   │   ├── secure_storage_service.dart
-│   │   └── certificate_pinner.dart
-│   ├── utils/
-│   │   ├── validators.dart
-│   │   ├── formatters.dart
-│   │   └── extensions/
-│   └── usecases/
-│       └── usecase.dart
+│   ├── config/                 # Configuration par environnement
+│   ├── errors/                 # Exceptions et Failures typées
+│   ├── network/                # Client HTTP, interceptors
+│   ├── security/               # Biométrie, secure storage
+│   └── utils/                  # Validators, formatters, extensions
 │
 ├── features/
 │   ├── auth/
 │   │   ├── data/
-│   │   │   ├── datasources/
-│   │   │   │   ├── auth_remote_datasource.dart
-│   │   │   │   └── auth_local_datasource.dart
-│   │   │   ├── models/
-│   │   │   │   ├── user_dto.dart
-│   │   │   │   └── token_dto.dart
-│   │   │   └── repositories/
-│   │   │       └── auth_repository_impl.dart
+│   │   │   ├── datasources/    # Remote + Local
+│   │   │   ├── models/         # DTOs (JSON serialization)
+│   │   │   └── repositories/   # Implémentation
 │   │   ├── domain/
-│   │   │   ├── entities/
-│   │   │   │   └── user.dart
-│   │   │   ├── repositories/
-│   │   │   │   └── auth_repository.dart
-│   │   │   └── usecases/
-│   │   │       ├── login_usecase.dart
-│   │   │       ├── logout_usecase.dart
-│   │   │       └── refresh_token_usecase.dart
+│   │   │   ├── entities/       # Modèles métier (freezed)
+│   │   │   ├── repositories/   # Interfaces
+│   │   │   └── usecases/       # LoginUseCase, LogoutUseCase...
 │   │   └── presentation/
-│   │       ├── bloc/
-│   │       │   ├── auth_bloc.dart
-│   │       │   ├── auth_event.dart
-│   │       │   └── auth_state.dart
-│   │       ├── pages/
-│   │       │   └── login_page.dart
-│   │       └── widgets/
-│   │           └── login_form.dart
+│   │       ├── bloc/           # AuthBloc, états, events
+│   │       ├── pages/          # LoginPage
+│   │       └── widgets/        # LoginForm, BiometricButton...
 │   │
-│   ├── dashboard/
-│   │   └── ... (même structure)
-│   ├── transactions/
-│   │   └── ... (même structure)
-│   └── transfer/
-│       └── ... (même structure)
+│   ├── dashboard/              # Même structure
+│   ├── transactions/           # Même structure
+│   └── transfer/               # Même structure
 │
 └── shared/
-    ├── widgets/
-    │   ├── buttons/
-    │   ├── inputs/
-    │   ├── dialogs/
-    │   └── loading/
-    ├── theme/
-    │   ├── app_theme.dart
-    │   ├── app_colors.dart
-    │   └── app_typography.dart
-    └── l10n/
-        ├── app_en.arb
-        └── app_fr.arb
-
-test/
-├── unit/
-│   ├── core/
-│   └── features/
-│       ├── auth/
-│       │   ├── data/
-│       │   ├── domain/
-│       │   └── presentation/
-│       └── ...
-├── widget/
-├── integration/
-└── golden/
-
-android/app/
-├── build.gradle
-├── proguard-rules.pro
-└── src/
-    ├── dev/
-    ├── staging/
-    └── prod/
-
-ios/
-├── Flutter/
-│   ├── Dev.xcconfig
-│   ├── Staging.xcconfig
-│   └── Prod.xcconfig
-└── Runner.xcodeproj/
-
-.github/
-└── workflows/
-    └── ci.yml
+    ├── widgets/                # Composants réutilisables
+    ├── theme/                  # AppTheme, AppColors, AppTypography
+    └── l10n/                   # Internationalisation
 ```
 
 ---
 
-## 8. Critères d'Évaluation
+## 🔐 Partie 2 : Authentification (20 points)
 
-### 8.1 Grille de Notation
+### 2.1 Écran de Connexion
 
-| Critère | Pondération | Seuil minimum |
-|---------|-------------|---------------|
-| Architecture Clean | 20% | Couches respectées, DI configurée |
-| Qualité du code | 15% | Lisible, documenté, conventions Dart |
-| Gestion d'état (BLoC) | 15% | États typés, transitions correctes |
-| Configuration Flavors | 10% | 3 environnements fonctionnels |
-| Sécurité | 15% | Certificate pinning, secure storage, biométrie |
-| Tests | 15% | 80% coverage, tests d'intégration |
-| CI/CD | 5% | Pipeline fonctionnel |
-| UI/UX & Performance | 5% | Fluidité, feedback, optimisations |
+| Fonctionnalité | Comportement | Points |
+|----------------|--------------|--------|
+| **Validation email** | Format RFC 5322, feedback temps réel | 2 |
+| **Validation mot de passe** | 8+ chars, 1 maj, 1 chiffre, 1 spécial | 2 |
+| **États du formulaire** | `idle` → `validating` → `submitting` → `success`/`error` | 3 |
+| **Rate limiting** | Blocage 30s après 3 échecs, compteur visible | 3 |
+| **Gestion des erreurs** | Messages contextuels (credentials invalides, réseau, serveur) | 2 |
 
-### 8.2 Éléments Éliminatoires
+### 2.2 Authentification Biométrique
+
+| Fonctionnalité | Comportement | Points |
+|----------------|--------------|--------|
+| **Détection support** | Vérifier disponibilité Touch ID / Face ID | 2 |
+| **Fallback PIN** | Si biométrie échoue ou indisponible | 2 |
+| **Activation optionnelle** | L'utilisateur choisit d'activer ou non | 2 |
+
+### 2.3 Gestion de Session
+
+| Fonctionnalité | Comportement | Points |
+|----------------|--------------|--------|
+| **Stockage sécurisé** | Tokens dans `flutter_secure_storage` | 2 |
+| **Refresh token** | Renouvellement automatique transparent | 3 |
+| **Expiration** | Logout automatique après 5 min d'inactivité | 2 |
+| **Remember me** | Option de persistance de session | 1 |
+
+### 2.4 États BLoC Attendus
+
+```dart
+// auth_state.dart
+@freezed
+class AuthState with _$AuthState {
+  const factory AuthState.initial() = _Initial;
+  const factory AuthState.loading() = _Loading;
+  const factory AuthState.authenticated(User user) = _Authenticated;
+  const factory AuthState.unauthenticated() = _Unauthenticated;
+  const factory AuthState.error(AuthFailure failure) = _Error;
+  const factory AuthState.locked({
+    required int remainingSeconds,
+    required int attemptCount,
+  }) = _Locked;
+}
+```
+
+---
+
+## 📊 Partie 3 : Dashboard (15 points)
+
+### 3.1 Affichage du Solde
+
+| Fonctionnalité | Comportement | Points |
+|----------------|--------------|--------|
+| **Animation d'apparition** | CountUp animation au chargement | 2 |
+| **Masquer/Afficher** | Toggle avec icône œil, état persisté | 2 |
+| **Multi-comptes** | Affichage de plusieurs comptes si applicable | 1 |
+
+### 3.2 Transactions Récentes
+
+| Fonctionnalité | Comportement | Points |
+|----------------|--------------|--------|
+| **Liste des 5 dernières** | Avec skeleton loading | 2 |
+| **Pull-to-refresh** | Debounce 1s, indicateur visuel | 2 |
+| **Navigation vers détail** | Tap → page de détail | 1 |
+
+### 3.3 Mode Offline
+
+| Fonctionnalité | Comportement | Points |
+|----------------|--------------|--------|
+| **Cache-first** | Afficher les données en cache si offline | 3 |
+| **Indicateur** | Banner "Données mises à jour il y a X min" | 1 |
+| **Sync automatique** | Refresh au retour de la connexion | 1 |
+
+---
+
+## 📜 Partie 4 : Historique des Transactions (15 points)
+
+### 4.1 Liste Paginée
+
+| Fonctionnalité | Comportement | Points |
+|----------------|--------------|--------|
+| **Cursor-based pagination** | 20 items/page, infinite scroll | 3 |
+| **Loading state** | Skeleton en bas de liste pendant chargement | 1 |
+| **État vide** | Message contextuel selon filtres | 1 |
+
+### 4.2 Filtres et Recherche
+
+| Fonctionnalité | Comportement | Points |
+|----------------|--------------|--------|
+| **Filtre par type** | Tous, Crédits, Débits (chips) | 2 |
+| **Filtre par période** | Date picker (début/fin) | 2 |
+| **Filtre par montant** | Range slider min/max | 1 |
+| **Recherche par libellé** | Debounce 300ms | 2 |
+| **Tri** | Par date ou montant, asc/desc | 1 |
+
+### 4.3 Affichage Transaction
+
+```dart
+// Informations à afficher par transaction
+class TransactionTile {
+  final DateTime date;          // Format: "15 Jan 2024"
+  final String label;           // "Virement à Jean Dupont"
+  final int amount;             // "+1 500 F" ou "-500 F"
+  final TransactionType type;   // Icône différente
+  final TransactionStatus status; // Badge couleur
+  final String? category;       // Tag optionnel
+}
+```
+
+| Points | Critère |
+|--------|---------|
+| 2 | Affichage clair et lisible de toutes les informations |
+
+---
+
+## 💸 Partie 5 : Nouveau Virement (15 points)
+
+### 5.1 Formulaire Multi-étapes
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│  Étape 1: Bénéficiaire  →  Étape 2: Montant  →  Étape 3: Confirmation  │
+│  ═══════════════════       ══════════════       ══════════════════     │
+└──────────────────────────────────────────────────────────────┘
+```
+
+| Étape | Fonctionnalités | Points |
+|-------|-----------------|--------|
+| **Bénéficiaire** | Liste des favoris + recherche + ajout nouveau | 2 |
+| **Validation IBAN** | Format + checksum (algorithme mod 97) | 3 |
+| **Montant** | Validation temps réel, formatage devise, max = solde | 2 |
+| **Libellé** | Max 140 chars avec compteur | 1 |
+| **Récapitulatif** | Toutes les infos + montant en gras | 1 |
+
+### 5.2 Sécurité du Virement
+
+| Fonctionnalité | Comportement | Points |
+|----------------|--------------|--------|
+| **Confirmation biométrique** | Obligatoire avant envoi | 2 |
+| **Idempotence** | Empêcher double soumission (disable button + idempotency key) | 2 |
+| **Annulation** | Possible tant que status = "processing" | 1 |
+
+### 5.3 États du Virement
+
+```dart
+@freezed
+class TransferState with _$TransferState {
+  const factory TransferState.initial() = _Initial;
+  const factory TransferState.beneficiarySelected(Beneficiary beneficiary) = _BeneficiarySelected;
+  const factory TransferState.amountEntered({
+    required Beneficiary beneficiary,
+    required int amount,
+    required String label,
+  }) = _AmountEntered;
+  const factory TransferState.confirming(TransferSummary summary) = _Confirming;
+  const factory TransferState.processing(String transactionId) = _Processing;
+  const factory TransferState.success(Transfer transfer) = _Success;
+  const factory TransferState.error(TransferFailure failure) = _Error;
+}
+```
+
+| Points | Critère |
+|--------|---------|
+| 1 | Tous les états gérés avec transitions claires |
+
+---
+
+## ⚙️ Partie 6 : Configuration Multi-Environnements (10 points)
+
+### 6.1 Flavors Requis
+
+| Flavor | Package ID | App Name | API |
+|--------|-----------|----------|-----|
+| `dev` | `com.finwallet.app.dev` | FinWallet DEV | `api-dev.finwallet.local` |
+| `staging` | `com.finwallet.app.staging` | FinWallet STG | `api-staging.finwallet.com` |
+| `prod` | `com.finwallet.app` | FinWallet | `api.finwallet.com` |
+
+### 6.2 Configuration Attendue
+
+| Plateforme | Fichiers à fournir | Points |
+|------------|-------------------|--------|
+| **Android** | `build.gradle` avec `productFlavors`, signing configs | 3 |
+| **iOS** | 3 schemes Xcode + fichiers `.xcconfig` | 3 |
+| **Dart** | `AppConfig` abstract + implémentations par env | 2 |
+
+### 6.3 Différenciation Visuelle
+
+| Exigence | Points |
+|----------|--------|
+| Badge sur icône (DEV/STG) ou bannière in-app | 1 |
+| Version + environnement visible dans Settings | 1 |
+
+### 6.4 Scripts de Build
+
+```bash
+# Fichier Makefile ou scripts/ attendu
+make run-dev        # flutter run --flavor dev -t lib/main_dev.dart
+make run-staging    # flutter run --flavor staging -t lib/main_staging.dart
+make build-staging  # flutter build apk --flavor staging -t lib/main_staging.dart
+make build-prod     # flutter build appbundle --flavor prod -t lib/main_prod.dart --obfuscate
+```
+
+---
+
+## 🧪 Partie 7 : Tests (15 points)
+
+### 7.1 Couverture Minimale
+
+| Type de test | Cible | Minimum | Points |
+|--------------|-------|---------|--------|
+| **Unit Tests - Use Cases** | Toutes les méthodes | 90% | 4 |
+| **Unit Tests - BLoCs** | Tous les états/events | 90% | 4 |
+| **Unit Tests - Validators** | Toutes les règles | 100% | 2 |
+| **Widget Tests** | Formulaires critiques | 50% | 3 |
+| **Integration Tests** | Parcours auth complet | 1 minimum | 2 |
+
+### 7.2 Tests Obligatoires
+
+#### Use Cases
+
+```dart
+// Exemple: login_usecase_test.dart
+group('LoginUseCase', () {
+  test('should return User when credentials are valid', ...);
+  test('should return InvalidCredentialsFailure when credentials are wrong', ...);
+  test('should return NetworkFailure when offline', ...);
+  test('should return ServerFailure on 5xx response', ...);
+  test('should return AccountLockedFailure after 3 failed attempts', ...);
+});
+```
+
+#### BLoCs
+
+```dart
+// Exemple: auth_bloc_test.dart
+blocTest<AuthBloc, AuthState>(
+  'emits [loading, authenticated] when login succeeds',
+  build: () => authBloc,
+  act: (bloc) => bloc.add(LoginRequested(email: 'test@test.com', password: 'Test123!')),
+  expect: () => [AuthState.loading(), AuthState.authenticated(mockUser)],
+);
+```
+
+### 7.3 Mocking
+
+| Dépendance | Comment mocker |
+|------------|----------------|
+| API HTTP | `MockClient` ou `mocktail` |
+| Secure Storage | `MockFlutterSecureStorage` |
+| Biométrie | `MockLocalAuthentication` |
+| Date/Time | Injecter un `Clock` mockable |
+
+---
+
+## 🔒 Partie 8 : Sécurité (10 points)
+
+### 8.1 Checklist Sécurité
+
+| Mesure | Implémentation | Points |
+|--------|----------------|--------|
+| **Stockage tokens** | `flutter_secure_storage` (Keychain iOS / Keystore Android) | 2 |
+| **Certificate Pinning** | SHA-256 pins dans la config (staging/prod) | 2 |
+| **Obfuscation** | `--obfuscate --split-debug-info` en release | 1 |
+| **Root/Jailbreak detection** | Avertissement (pas blocage) | 1 |
+| **Screenshot prevention** | `FLAG_SECURE` sur écrans sensibles (Android) | 1 |
+| **TLS 1.2 minimum** | Configuration native | 1 |
+| **Timeout session** | Logout après 5 min d'inactivité | 1 |
+| **Pas de logs sensibles** | Aucun token/password dans les logs | 1 |
+
+### 8.2 Anti-patterns à Éviter
+
+| ❌ Ne pas faire | ✅ Faire |
+|----------------|---------|
+| Stocker tokens en `SharedPreferences` | Utiliser `flutter_secure_storage` |
+| Logger les tokens/mots de passe | Masquer les données sensibles |
+| Hardcoder les URLs d'API | Utiliser la configuration par flavor |
+| Ignorer les erreurs SSL | Implémenter le certificate pinning |
+
+---
+
+## 🔄 Partie 9 : API Mock (10 points)
+
+### 9.1 Contrats d'API
+
+Implémentez un mock local ou utilisez une solution comme **json_server** / **MockAPI**.
+
+#### POST /auth/login
+
+```json
+// Request
+{
+  "email": "senior@finwallet.com",
+  "password": "Senior2024!@#"
+}
+
+// Response 200
+{
+  "user": {
+    "id": "usr_123",
+    "email": "senior@finwallet.com",
+    "firstName": "Jean",
+    "lastName": "Dupont"
+  },
+  "accessToken": "eyJhbGc...",
+  "refreshToken": "eyJhbGc...",
+  "expiresIn": 3600
+}
+
+// Response 401
+{
+  "error": "INVALID_CREDENTIALS",
+  "message": "Email ou mot de passe incorrect"
+}
+
+// Response 423
+{
+  "error": "ACCOUNT_LOCKED",
+  "message": "Compte bloqué",
+  "remainingSeconds": 30
+}
+```
+
+#### GET /accounts
+
+```json
+// Response 200
+{
+  "accounts": [
+    {
+      "id": "acc_001",
+      "label": "Compte courant",
+      "iban": "CI93CI000101015291456700074",
+      "balance": 1543287,
+      "currency": "XOF"
+    },
+    {
+      "id": "acc_002",
+      "label": "Compte épargne",
+      "iban": "CI93CI000101017823415600089",
+      "balance": 4215000,
+      "currency": "XOF"
+    }
+  ]
+}
+```
+
+#### GET /transactions?cursor={cursor}&limit=20&type={type}
+
+```json
+// Response 200
+{
+  "transactions": [
+    {
+      "id": "txn_001",
+      "date": "2024-01-15T10:30:00Z",
+      "label": "Virement à Koné Amadou",
+      "amount": -150000,
+      "type": "TRANSFER",
+      "status": "COMPLETED",
+      "category": "transfer"
+    }
+  ],
+  "nextCursor": "txn_020",
+  "hasMore": true
+}
+```
+
+#### POST /transfers
+
+```json
+// Request
+{
+  "fromAccountId": "acc_001",
+  "beneficiaryIban": "CI93CI000101017823415600089",
+  "beneficiaryName": "Marie Konan",
+  "amount": 50000,
+  "label": "Remboursement déjeuner",
+  "idempotencyKey": "idem_abc123"
+}
+
+// Response 201
+{
+  "transfer": {
+    "id": "txn_099",
+    "status": "PROCESSING",
+    "amount": 50000,
+    "createdAt": "2024-01-15T14:22:00Z"
+  }
+}
+
+// Response 400
+{
+  "error": "INSUFFICIENT_FUNDS",
+  "message": "Solde insuffisant"
+}
+```
+
+---
+
+## 🚀 Partie 10 : CI/CD (5 points)
+
+### 10.1 Pipeline GitHub Actions
+
+```yaml
+# .github/workflows/ci.yml
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  analyze:
+    # flutter analyze + dart format --check
+    
+  test:
+    # flutter test --coverage
+    # Upload coverage report
+    
+  build-staging:
+    # flutter build apk --flavor staging
+    # Upload artifact
+    
+  build-prod:
+    # Manuel uniquement (workflow_dispatch)
+    # flutter build appbundle --flavor prod --obfuscate
+```
+
+| Exigence | Points |
+|----------|--------|
+| Lint + format check | 1 |
+| Tests avec coverage | 2 |
+| Build staging automatique | 1 |
+| Build prod manuel | 1 |
+
+---
+
+## 📊 Grille d'Évaluation Complète
+
+### Récapitulatif des Points
+
+| Partie | Points | Poids |
+|--------|--------|-------|
+| Architecture | 25 | 20% |
+| Authentification | 20 | 16% |
+| Dashboard | 15 | 12% |
+| Historique Transactions | 15 | 12% |
+| Nouveau Virement | 15 | 12% |
+| Configuration Flavors | 10 | 8% |
+| Tests | 15 | 12% |
+| Sécurité | 10 | 8% |
+| **Total** | **125** | **100%** |
+
+### Barème de Niveau
+
+| Score | Pourcentage | Niveau |
+|-------|-------------|--------|
+| < 62 | < 50% | Insuffisant |
+| 62-77 | 50-62% | Junior confirmé |
+| 78-93 | 63-75% | **Engineer 2** ✅ |
+| 94-109 | 76-87% | **Senior 1** ✅ |
+| ≥ 110 | ≥ 88% | Senior+ |
+
+### Critères Éliminatoires
 
 | Critère | Raison |
 |---------|--------|
-| Pas de Clean Architecture | Compétence fondamentale attendue |
-| Pas de tests unitaires | Non négociable à ce niveau |
-| Tokens en clair | Faille de sécurité critique |
-| Pas de gestion d'erreurs | Expérience utilisateur inacceptable |
-| Code non compilable | Livrable non fonctionnel |
+| Code ne compile pas | Livrable non fonctionnel |
+| Pas de Clean Architecture | Compétence fondamentale |
+| Aucun test | Non négociable à ce niveau |
+| Tokens stockés en clair | Faille de sécurité critique |
+| Pas de gestion d'erreurs | UX inacceptable |
 
-### 8.3 Bonus Valorisés
+---
+
+## ⭐ Bonus (jusqu'à +25 points)
+
+### Bonus Qualité (+10 max)
 
 | Bonus | Points |
 |-------|--------|
-| Couverture tests > 90% | +5% |
-| Fastlane configuré | +5% |
-| Golden tests | +3% |
-| Internationalisation complète | +3% |
-| Mode offline robuste | +5% |
-| Documentation technique ADR | +5% |
-| Animations fluides (60fps) | +2% |
-| Accessibilité (a11y) | +3% |
+| Couverture tests > 85% | +3 |
+| Golden tests (4 écrans) | +3 |
+| Tests d'intégration complets (3 parcours) | +4 |
 
----
+### Bonus Features (+10 max)
 
-## 9. Documentation Attendue
-
-### 9.1 README.md
-
-| Section | Contenu attendu |
-|---------|-----------------|
-| Introduction | Description du projet et fonctionnalités |
-| Prérequis | Versions Flutter, Dart, outils requis |
-| Installation | Étapes détaillées |
-| Configuration | Variables d'environnement, secrets |
-| Commandes | Build, test, lint pour chaque flavor |
-| Architecture | Diagramme + explication des couches |
-| Tests | Comment lancer les tests, coverage |
-| CI/CD | Description du pipeline |
-
-### 9.2 Documentation Technique
-
-| Document | Contenu attendu |
-|----------|-----------------|
-| ARCHITECTURE.md | Décisions d'architecture (ADR format apprécié) |
-| SECURITY.md | Mesures de sécurité implémentées |
-| API.md | Contrats d'API mockés |
-
----
-
-## 10. Livrables
-
-| Livrable | Description | Obligatoire |
-|----------|-------------|-------------|
-| Code source | Repository Git avec historique propre | Oui |
-| README.md | Documentation complète | Oui |
-| Tests | Couverture ≥ 80% | Oui |
-| CI/CD | Pipeline GitHub Actions fonctionnel | Oui |
-| APK Staging | Build testable | Oui |
-| Documentation technique | ARCHITECTURE.md minimum | Oui |
-| Captures d'écran | Tous les écrans | Recommandé |
-| Vidéo démo | Parcours utilisateur | Bonus |
-
----
-
-## 11. Données de Test
-
-| Champ | Valeur |
+| Bonus | Points |
 |-------|--------|
-| Email | `senior@finwallet.com` |
-| Mot de passe | `Senior2024!@#` |
-| PIN | `123456` |
+| Export PDF des transactions | +3 |
+| Graphique évolution solde (fl_chart) | +3 |
+| Mode sombre complet | +2 |
+| Internationalisation (FR/EN) | +2 |
 
-**Comptes de test :**
+### Bonus DevOps (+5 max)
 
-| Compte | Solde | IBAN |
-|--------|-------|------|
-| Compte courant | 1 543 287 F CFA | CI93 CI00 0101 0152 9145 6700 0074 |
-| Compte épargne | 4 215 000 F CFA | CI93 CI00 0101 0178 2341 5600 0089 |
-
----
-
-## 12. Conseils
-
-| Conseil | Description |
-|---------|-------------|
-| Commits | Conventional commits (feat:, fix:, refactor:, test:) |
-| Branches | Feature branches + merge requests |
-| Code review | Code prêt à être reviewé par un pair |
-| Pragmatisme | Livrer un produit fonctionnel plutôt que parfait |
-| Communication | Documenter les compromis et choix techniques |
+| Bonus | Points |
+|-------|--------|
+| Fastlane configuré (beta lane) | +3 |
+| Firebase App Distribution intégré | +2 |
 
 ---
 
-## 13. Entretien Technique
+## 📝 Documentation Attendue
 
-Suite à ce test, un entretien technique de 60 minutes portera sur :
+### README.md
 
-| Sujet | Durée | Description |
-|-------|-------|-------------|
-| Code review | 20 min | Revue de votre code, questions sur vos choix |
-| Architecture | 15 min | Justification des décisions, alternatives envisagées |
-| Évolutions | 15 min | Comment ajouter une feature (ex: paiement QR) |
-| Questions | 10 min | Vos questions sur l'équipe et le projet |
+```markdown
+# FinWallet
+
+## 📱 Description
+[Brève description]
+
+## 🛠️ Prérequis
+- Flutter 3.19+
+- Dart 3.3+
+- Xcode 15+ (iOS)
+- Android Studio (Android)
+
+## 🚀 Installation
+[Commandes détaillées]
+
+## ▶️ Exécution
+make run-dev        # Environnement dev
+make run-staging    # Environnement staging
+make test           # Lancer les tests
+make coverage       # Rapport de couverture
+
+## 🏗️ Architecture
+[Diagramme + explication]
+
+## 🔐 Sécurité
+[Mesures implémentées]
+
+## 📊 Tests
+[Comment lancer, coverage actuel]
+```
+
+### ARCHITECTURE.md
+
+Format ADR (Architecture Decision Record) apprécié :
+
+```markdown
+# ADR 001: Choix de BLoC pour la gestion d'état
+
+## Contexte
+[Pourquoi cette décision était nécessaire]
+
+## Décision
+[Ce qui a été décidé]
+
+## Conséquences
+[Avantages et inconvénients]
+```
 
 ---
 
-## 14. Questions
+## 🎯 Conseils pour Réussir
 
-Pour toute question sur le sujet, contactez-nous à **akwaba@sankofa-lab.co**.
+### Ce que nous recherchons
 
-La capacité à poser les bonnes questions et à lever les ambiguïtés fait partie de l'évaluation.
+✅ Code **lisible** et **bien structuré**  
+✅ Tests qui **documentent le comportement**  
+✅ Gestion d'erreurs **exhaustive et user-friendly**  
+✅ Architecture **cohérente** et **justifiée**  
+✅ Git history **propre** (commits conventionnels)
+
+### Ce que nous pénalisons
+
+❌ Over-engineering (patterns inutiles pour la taille du projet)  
+❌ Copy-paste de code (violations DRY)  
+❌ Tests qui ne testent rien de significatif  
+❌ BLoCs avec logique métier (doit être dans les Use Cases)  
+❌ Widgets "god class" de 500+ lignes
+
+### Priorisation Recommandée
+
+1. **D'abord** : Architecture + Auth + Tests associés
+2. **Ensuite** : Dashboard + Transactions  
+3. **Puis** : Virement + Flavors
+4. **Enfin** : Bonus si temps restant
+
+---
+
+## 📤 Soumission
+
+1. Repository Git public ou privé avec accès accordé
+2. Tag ou release `v1.0.0` sur le commit final
+3. Email avec objet : `[Take-Home Flutter] Prénom Nom - FinWallet`
+4. Inclure dans l'email :
+   - Lien vers le repository
+   - Temps passé (estimation honnête)
+   - Difficultés rencontrées (optionnel)
+
+---
+
+## ❓ FAQ
+
+**Q : Puis-je utiliser Riverpod au lieu de BLoC ?**  
+R : Non, BLoC est imposé pour ce test. Nous évaluons votre maîtrise de cet outil spécifique.
+
+**Q : L'API mock doit-elle être déployée ?**  
+R : Non, un mock local (fichiers JSON ou `http_mock_adapter`) suffit.
+
+**Q : Dois-je implémenter un vrai backend ?**  
+R : Non, concentrez-vous sur le code Flutter. Le mock suffit.
+
+**Q : Les animations sont-elles évaluées ?**  
+R : La fluidité oui (60fps), les animations complexes sont un bonus.
+
+**Q : Puis-je utiliser des packages tiers ?**  
+R : Oui, mais justifiez chaque dépendance dans le README.
+
+---
+
+## 📞 Questions
+
+Pour toute question : **recrutement@finwallet.com**
+
+La capacité à poser les bonnes questions fait partie de l'évaluation.
+
+---
+
+## 🔍 Entretien Technique (Post-Test)
+
+| Sujet | Durée | Questions types |
+|-------|-------|-----------------|
+| **Code Review** | 20 min | Pourquoi ce choix ? Comment refactorer X ? |
+| **Architecture** | 15 min | Alternatives envisagées ? Limites de votre solution ? |
+| **Évolution** | 15 min | Comment ajouter le paiement QR ? Le multi-devise ? |
+| **Debugging** | 10 min | Ce bug apparaît, comment investiguer ? |
 
 ---
 
 **Bonne chance ! 🚀**
 
-*Ce test reflète les standards de qualité attendus chez FinWallet. Nous valorisons la rigueur, la sécurité et l'excellence technique.*
+*Montrez-nous comment vous construisez des applications mobiles de qualité production.*
