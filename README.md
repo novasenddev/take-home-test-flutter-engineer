@@ -747,7 +747,7 @@ R : Oui, mais justifiez chaque dépendance dans le README.
 
 ## 📞 Questions
 
-Pour toute question : **recrutement@finwallet.com**
+Pour toute question : **akwaba@sankofa-lab.co**
 
 La capacité à poser les bonnes questions fait partie de l'évaluation.
 
